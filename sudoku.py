@@ -81,21 +81,36 @@ class Sudoku:
         Returns the first variable with assignment epsilon
         i.e. first square in the board that is unassigned.
         """
-        raise NotImplementedError()
+        dim = len(self.board)
+        for row in xrange(dim):
+            for col in xrange(dim):
+                if self.board[row][col] == 0:
+                    return row, col
+        return None
 
     def complete(self):
         """
         IMPLEMENT FOR PART 1
         Returns true if the assignment is complete. 
         """
-        raise NotImplementedError()
+        return self.firstEpsilonVariable() is None 
 
     def variableDomain(self, r, c):
         """
         IMPLEMENT FOR PART 1
         Returns current domain for the (row, col) variable .
         """
-        raise NotImplementedError()
+        
+        if self.board[r][c] != 0:
+            return []
+
+        freeVals = []
+        # Numbers 1..9
+        for val in xrange(1, len(self.board) + 1):
+            if not (val in self.row(r) or val in self.col(r)
+                or val in self.box(self.box_id(r,c))): 
+                freeVals.append(val)
+        return freeVals
 
     # PART 2
     def updateFactor(self, factor_type, i):
@@ -105,13 +120,30 @@ class Sudoku:
         `factor_type` is one of BOX, ROW, COL 
         `i` is an index between 0 and 8.
         """
-        raise NotImplementedError()
-        # values = []
-        # if factor_type == BOX:
-            
-        # if factor_type == ROW:
-            
-        # if factor_type == COL:
+
+        num_conflicts = 0
+        factor = [x for x in xrange(1, 10)]
+        values = []
+
+        if factor_type == BOX:
+            values = self.box(i)
+        elif factor_type == ROW:
+            values = self.row(i)
+        elif factor_type == COL:
+            values = self.col(i)
+        else:
+            raise "Invalid Factor_Type"
+
+        for val in values:
+            if val == 0:
+                continue
+            if factor[val - 1] is None:
+                num_conflicts += 1
+            else:
+                factor[val - 1] = None
+
+        self.factorRemaining[factor_type, i] = factor
+        self.factorNumConflicts[factor_type, i] = num_conflicts
             
         
     def updateAllFactors(self):
@@ -120,14 +152,18 @@ class Sudoku:
         Update the values remaining for all factors.
         There is one factor for each row, column, and box.
         """
-        raise NotImplementedError()
+        for factor_type in [ROW, COL, BOX]:
+            for i in xrange(len(self.board)):
+                self.updateFactor(factor_type, i)
 
     def updateVariableFactors(self, variable):
         """
         IMPLEMENT FOR PART 2
         Update all the factors impacting a variable (neighbors in factor graph).
         """
-        raise NotImplementedError()
+        self.updateFactor(ROW, variable[0])
+        self.updateFactor(COL, variable[1])
+        self.updateFactor(BOX, self.box_id(variable[0], variable[1]))
 
     # CSP SEARCH CODE
     def nextVariable(self):
@@ -146,7 +182,30 @@ class Sudoku:
         Returns new assignments with each possible value 
         assigned to the variable returned by `nextVariable`.
         """
-        raise NotImplementedError()
+
+        # Ensure all factors are generated
+        self.updateAllFactors()
+
+        # Check if sudoku is solved
+        if self.complete():
+            return []
+
+        row, col = self.nextVariable()
+
+        successors = []
+        row_set = set(self.factorRemaining[ROW, row])
+        col_set = set(self.factorRemaining[COL, col])
+        box_set = set(self.factorRemaining[BOX, self.box_id(row, col)])
+
+        candidates = row_set.intersection(col_set).intersection(box_set)
+        candidates = candidates.difference(set([None]))
+
+        for candidate in candidates:
+            successor = self.setVariable(row, col, candidate)
+            successor.updateVariableFactors((row, col))
+            successors.append(successor)
+
+        return successors
 
     def getAllSuccessors(self):
         if not args.forward: 
