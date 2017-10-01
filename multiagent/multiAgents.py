@@ -15,6 +15,7 @@
 from util import manhattanDistance
 from game import Directions
 import random, util
+import sys
 
 from game import Agent
 
@@ -111,25 +112,87 @@ class MinimaxAgent(MultiAgentSearchAgent):
       Your minimax agent (question 2)
     """
 
+    # def __init__(self, index, depth):
+    #   self.index = index
+    #   self.depth = depth
+
     def getAction(self, gameState):
-        """
-          Returns the minimax action from the current gameState using self.depth
-          and self.evaluationFunction.
+      """
+        Returns the minimax action from the current gameState using self.depth
+        and self.evaluationFunction.
 
-          Here are some method calls that might be useful when implementing minimax.
+        Here are some method calls that might be useful when implementing minimax.
 
-          gameState.getLegalActions(agentIndex):
-            Returns a list of legal actions for an agent
-            agentIndex=0 means Pacman, ghosts are >= 1
+        gameState.getLegalActions(agentIndex):
+          Returns a list of legal actions for an agent
+          agentIndex=0 means Pacman, ghosts are >= 1
 
-          gameState.generateSuccessor(agentIndex, action):
-            Returns the successor game state after an agent takes an action
+        gameState.generateSuccessor(agentIndex, action):
+          Returns the successor game state after an agent takes an action
 
-          gameState.getNumAgents():
-            Returns the total number of agents in the game
-        """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        gameState.getNumAgents():
+          Returns the total number of agents in the game
+      """
+
+      # Get possible actions
+      actions = gameState.getLegalActions(self.index)
+      newStates = [gameState.generateSuccessor(self.index, action) \
+                                                    for action in actions]
+      val = -sys.maxint
+      bestIndex = 0
+      if len(actions) == 0:
+        print "Empty list of actions."
+      for i, state in enumerate(newStates):
+        newVal = self.value(state)
+        print newVal
+        if newVal > val:
+          val = newVal
+          bestIndex = i
+      return actions[bestIndex]
+
+    def value(self, gameState):
+      # IF STATE IS TERMINAL STATE (DEPTH = 1, INDEX = MAX_INDEX - 1)
+      if self.depth == 1 and self.index == gameState.getNumAgents() - 1:
+        return self.evaluationFunction(gameState)
+      # IF NEXT STATE IS MAX
+      elif self.index == 0:
+        return self.maxValue(gameState)
+      # IF NEXT STATE IS MIN
+      else:
+        return self.minValue(gameState)
+
+    def maxValue(self, gameState):
+      v = -sys.maxint
+      actions = gameState.getLegalActions(self.index)
+      newStates = [gameState.generateSuccessor(self.index, action) \
+                                                    for action in actions]
+      if self.index + 1 == gameState.getNumAgents():
+        newAgent = MinimaxAgent(depth=self.depth - 1)
+        newAgent.index = 0
+      else:
+        newAgent = MinimaxAgent(depth=self.depth)
+        newAgent.index = self.index + 1
+      for state in newStates:
+        v = max(v, newAgent.value(state))
+      if v > -sys.maxint:
+        print v
+      return v
+
+
+    def minValue(self, gameState):
+      v = sys.maxint
+      actions = gameState.getLegalActions(self.index)
+      newStates = [gameState.generateSuccessor(self.index, action) \
+                                                    for action in actions]
+      if self.index + 1 == gameState.getNumAgents():
+        newAgent = MinimaxAgent(depth=self.depth - 1)
+        newAgent.index = 0
+      else:
+        newAgent = MinimaxAgent(depth=self.depth)
+        newAgent.index = self.index + 1
+      for state in newStates:
+        v = min(v, newAgent.value(state))
+      return v
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
