@@ -100,17 +100,17 @@ class Sudoku:
         IMPLEMENT FOR PART 1
         Returns current domain for the (row, col) variable .
         """
-        
+
         if self.board[r][c] != 0:
             return []
 
-        freeVals = []
-        # Numbers 1..9
-        for val in xrange(1, len(self.board) + 1):
-            if not (val in self.row(r) or val in self.col(r)
-                or val in self.box(self.box_id(r,c))): 
-                freeVals.append(val)
-        return freeVals
+        row_set = set(self.factorRemaining[ROW, r])
+        col_set = set(self.factorRemaining[COL, c])
+        box_set = set(self.factorRemaining[BOX, self.box_id(r, c)])
+
+        domain = row_set.intersection(col_set).intersection(box_set)
+        domain = domain.difference(set([None]))
+        return list(domain)
 
     # PART 2
     def updateFactor(self, factor_type, i):
@@ -222,7 +222,15 @@ class Sudoku:
         IMPLEMENT IN PART 4
         Returns true if all variables have non-empty domains.
         """
-        raise NotImplementedError()
+        self.updateAllFactors()
+
+        # Check domains for all variables
+        for row in xrange(len(self.board)):
+            for col in xrange(len(self.board)):
+                if self.board[row][col] == 0:
+                    if self.variableDomain(row, col) == []:
+                        return False
+        return True
 
     # LOCAL SEARCH CODE
     # Fixed variables cannot be changed by the player.
@@ -266,8 +274,14 @@ class Sudoku:
         with all the row factors being held consistent. 
         Should call `updateAllFactors` at end.
         """
-        raise NotImplementedError()
-        # self.updateAllFactors()
+        self.updateAllFactors()
+
+        for r in xrange(len(self.board)):
+            remaining = [x for x in self.factorRemaining[ROW, r] if x is not None]
+            els = random.sample(remaining, len(remaining))
+            for c in xrange(len(self.board)):
+                if self.board[r][c] == 0:
+                    self.board[r][c] = els.pop()
     
     # PART 6
     def randomSwap(self):
@@ -276,7 +290,13 @@ class Sudoku:
         Returns two random variables that can be swapped without
         causing a row factor conflict.
         """
-        raise NotImplementedError()
+        r = random.randint(0, len(self.board) - 1)
+        colInd = []
+        for c in xrange(len(self.board)):
+            if (r,c) not in self.fixedVariables:
+                colInd.append(c)
+        rcols = random.sample(colInd, 2)
+        return (r, rcols[0]), (r, rcols[1])
       
 
     # PART 7
@@ -285,8 +305,22 @@ class Sudoku:
         IMPLEMENT FOR PART 7
         Decide if we should swap the values of variable1 and variable2.
         """
-        raise NotImplementedError()
+        self.updateAllFactors()
+        currentViolations = self.numConflicts()
 
+        newBoard = deepcopy(self.board)
+        r1, c1 = variable1
+        r2, c2 = variable2
+        newBoard[r1][c1], newBoard[r2][c2] = newBoard[r2][c2], newBoard[r1][c1]
+        newSudoku = Sudoku(newBoard)
+        newSudoku.updateAllFactors()
+
+        swapViolations = newSudoku.numConflicts()
+
+        if swapViolations <= currentViolations:
+            self.board = newBoard
+        elif random.random() < 0.001:
+            self.board = newBoard
         
     ### IGNORE - PRINTING CODE
         
