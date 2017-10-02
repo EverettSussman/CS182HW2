@@ -197,9 +197,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def value(self, gameState, alpha, beta):
       # IF STATE IS TERMINAL STATE
-      print "alpha = {}, beta = {}".format(alpha, beta)
       if gameState.isWin() or gameState.isLose() or self.depth == 0:
-        print self.evaluationFunction(gameState)
         return self.evaluationFunction(gameState)
       # IF NEXT STATE IS MAX
       elif self.index == 0:
@@ -210,8 +208,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def maxValue(self, gameState, alpha, beta):
       actions = gameState.getLegalActions(self.index)
-      newStates = [gameState.generateSuccessor(self.index, action) \
-                                                    for action in actions]
       if self.index + 1 == gameState.getNumAgents():
         newAgent = AlphaBetaAgent(depth=self.depth - 1)
         newAgent.index = 0
@@ -219,7 +215,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         newAgent = AlphaBetaAgent(depth=self.depth)
         newAgent.index = self.index + 1
       bestV = -sys.maxint
-      for i, state in enumerate(newStates):
+      for i, action in enumerate(actions):
+        state = gameState.generateSuccessor(self.index, action)
         newV = newAgent.value(state, alpha, beta)
         if newV > bestV:
           bestV = newV
@@ -231,8 +228,6 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
     def minValue(self, gameState, alpha, beta):
       actions = gameState.getLegalActions(self.index)
-      newStates = [gameState.generateSuccessor(self.index, action) \
-                                                    for action in actions]
       if self.index + 1 == gameState.getNumAgents():
         newAgent = AlphaBetaAgent(depth=self.depth - 1)
         newAgent.index = 0
@@ -240,7 +235,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         newAgent = AlphaBetaAgent(depth=self.depth)
         newAgent.index = self.index + 1
       worstV = sys.maxint
-      for i, state in enumerate(newStates):
+      for i, action in enumerate(actions):
+        state = gameState.generateSuccessor(self.index, action)
         newV = newAgent.value(state, alpha, beta)
         if newV < worstV:
           worstV = newV
@@ -257,14 +253,58 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
 
     def getAction(self, gameState):
-        """
-          Returns the expectimax action using self.depth and self.evaluationFunction
+      """
+        Returns the expectimax action using self.depth and self.evaluationFunction
 
-          All ghosts should be modeled as choosing uniformly at random from their
-          legal moves.
-        """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        All ghosts should be modeled as choosing uniformly at random from their
+        legal moves.
+      """
+      return self.maxValue(gameState)[1]
+
+    def value(self, gameState):
+      # IF STATE IS TERMINAL STATE
+      if gameState.isWin() or gameState.isLose() or self.depth == 0:
+        return self.evaluationFunction(gameState)
+      # IF NEXT STATE IS MAX
+      elif self.index == 0:
+        return self.maxValue(gameState)[0]
+      # IF NEXT STATE IS MIN
+      else:
+        return self.expectMinValue(gameState)
+
+    def maxValue(self, gameState):
+      actions = gameState.getLegalActions(self.index)
+      newStates = [gameState.generateSuccessor(self.index, action) \
+                                                    for action in actions]
+      if self.index + 1 == gameState.getNumAgents():
+        newAgent = ExpectimaxAgent(depth=self.depth - 1)
+        newAgent.index = 0
+      else:
+        newAgent = ExpectimaxAgent(depth=self.depth)
+        newAgent.index = self.index + 1
+      bestV = -sys.maxint
+      for i, state in enumerate(newStates):
+        newV = newAgent.value(state)
+        if newV > bestV:
+          bestV = newV
+          bestAction = actions[i]
+      return bestV, bestAction
+
+    def expectMinValue(self, gameState):
+      actions = gameState.getLegalActions(self.index)
+      newStates = [gameState.generateSuccessor(self.index, action) \
+                                                    for action in actions]
+      if self.index + 1 == gameState.getNumAgents():
+        newAgent = ExpectimaxAgent(depth=self.depth - 1)
+        newAgent.index = 0
+      else:
+        newAgent = ExpectimaxAgent(depth=self.depth)
+        newAgent.index = self.index + 1
+
+      expectSum = 0
+      for state in newStates:
+        expectSum += newAgent.value(state)
+      return expectSum/float(len(actions))
 
 def betterEvaluationFunction(currentGameState):
     """
